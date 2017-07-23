@@ -1,0 +1,6 @@
+zuul:
+  routes:
+    access:
+      path: /serviceA
+      url: forward:/services
+z
