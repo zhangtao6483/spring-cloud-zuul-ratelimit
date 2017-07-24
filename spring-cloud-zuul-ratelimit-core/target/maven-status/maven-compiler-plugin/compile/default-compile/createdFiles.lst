@@ -1,0 +1,5 @@
+com/achilles/cloud/zuul/Rate.class
+com/achilles/cloud/zuul/config/LimitReq.class
+com/achilles/cloud/zuul/strategy/LimitReqStrategy.class
+com/achilles/cloud/zuul/config/RateLimitProperties.class
+com/achilles/cloud/zuul/filter/RateLimitFilter.class

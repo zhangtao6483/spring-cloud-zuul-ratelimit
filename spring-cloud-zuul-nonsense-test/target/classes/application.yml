@@ -3,5 +3,4 @@ zuul:
     access:
       path: /nonsense
       url: forward:/services
-  ratelimit:
-    enabled: false
+

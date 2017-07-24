@@ -1,5 +1,15 @@
 zuul:
   routes:
-    access:
+    serviceA:
       path: /serviceA
       url: forward:/services
+  ratelimit:
+    enabled: true
+    limitReqs:
+      serviceA:
+        rate: 10
+
+spring:
+  redis:
+    host: 127.0.0.1
+    port: 6379
