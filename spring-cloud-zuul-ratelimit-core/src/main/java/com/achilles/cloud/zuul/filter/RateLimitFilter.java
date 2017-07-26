@@ -11,15 +11,14 @@ import com.achilles.cloud.zuul.Rate;
 import com.achilles.cloud.zuul.config.LimitReq;
 import com.achilles.cloud.zuul.config.LimitReq.Type;
 import com.achilles.cloud.zuul.config.RateLimitProperties;
+import com.achilles.cloud.zuul.exception.CustomZuulRuntimeException;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
-import com.netflix.zuul.exception.ZuulException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.netflix.zuul.filters.Route;
 import org.springframework.cloud.netflix.zuul.filters.RouteLocator;
 import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants;
-import org.springframework.cloud.netflix.zuul.util.ZuulRuntimeException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UrlPathHelper;
@@ -79,8 +78,8 @@ public class RateLimitFilter extends ZuulFilter {
             if (rate.getRemaining() < 0) {
                 ctx.setResponseStatusCode(TOO_MANY_REQUESTS.value());
                 ctx.put("rateLimitExceeded", "true");
-                throw new ZuulRuntimeException(new ZuulException(TOO_MANY_REQUESTS.toString(),
-                    TOO_MANY_REQUESTS.value(), null));
+                throw new CustomZuulRuntimeException(TOO_MANY_REQUESTS.toString(),
+                    TOO_MANY_REQUESTS.value(), null);
             }
         });
 

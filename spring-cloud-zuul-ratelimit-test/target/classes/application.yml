@@ -7,7 +7,7 @@ zuul:
     enabled: true
     limitReqs:
       serviceA:
-        rate: 10
+        rate: 1
         type:
           - url
 spring:
