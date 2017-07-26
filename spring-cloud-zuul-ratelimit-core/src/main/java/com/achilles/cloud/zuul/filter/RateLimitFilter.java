@@ -1,32 +1,33 @@
 package com.achilles.cloud.zuul.filter;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.StringJoiner;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.achilles.cloud.zuul.Rate;
 import com.achilles.cloud.zuul.config.LimitReq;
+import com.achilles.cloud.zuul.config.LimitReq.Type;
 import com.achilles.cloud.zuul.config.RateLimitProperties;
-import com.achilles.cloud.zuul.strategy.LimitReqStrategy;
-import com.google.common.util.concurrent.RateLimiter;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
 import com.netflix.zuul.exception.ZuulException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cloud.netflix.zuul.filters.Route;
 import org.springframework.cloud.netflix.zuul.filters.RouteLocator;
+import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants;
 import org.springframework.cloud.netflix.zuul.util.ZuulRuntimeException;
-import org.springframework.context.annotation.Bean;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UrlPathHelper;
 
+import static com.achilles.cloud.zuul.config.LimitReq.Type.ORIGIN;
+import static com.achilles.cloud.zuul.config.LimitReq.Type.URL;
+import static com.achilles.cloud.zuul.config.LimitReq.Type.USER;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 
 /**
@@ -39,6 +40,7 @@ public class RateLimitFilter extends ZuulFilter {
 
     private static final UrlPathHelper URL_PATH_HELPER = new UrlPathHelper();
     private static final String X_FORWARDED_FOR = "X-FORWARDED-FOR";
+    private static final String ANONYMOUS = "anonymous";
 
     @Autowired
     private RouteLocator routeLocator;
@@ -46,11 +48,12 @@ public class RateLimitFilter extends ZuulFilter {
     @Autowired
     private RateLimitProperties properties;
 
-    private LimitReqStrategy limitReqStrategy;
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
 
     @Override
     public String filterType() {
-        return "pre";
+        return FilterConstants.PRE_TYPE;
     }
 
     @Override
@@ -71,9 +74,8 @@ public class RateLimitFilter extends ZuulFilter {
         final HttpServletRequest request = ctx.getRequest();
 
         limitReq().ifPresent(limitReq -> {
-            log.info("................");
-            Rate rate = limitReqStrategy.consume(limitReq, getRemoteAddr(request));
-
+            Rate rate = consume(limitReq, key(request, limitReq.getType()));
+            log.info(rate.toString());
             if (rate.getRemaining() < 0) {
                 ctx.setResponseStatusCode(TOO_MANY_REQUESTS.value());
                 ctx.put("rateLimitExceeded", "true");
@@ -102,18 +104,34 @@ public class RateLimitFilter extends ZuulFilter {
         return request.getRemoteAddr();
     }
 
-    @ConditionalOnClass(RedisTemplate.class)
-    @ConditionalOnMissingBean(RateLimiter.class)
-    public static class RedisConfiguration {
-        @Bean
-        public StringRedisTemplate redisTemplate(RedisConnectionFactory connectionFactory) {
-            return new StringRedisTemplate(connectionFactory);
+    private String key(final HttpServletRequest request, final List<Type> types) {
+        final Route route = route();
+        final StringJoiner joiner = new StringJoiner(":");
+        joiner.add(route.getId());
+        if (!types.isEmpty()) {
+            if (types.contains(URL)) {
+                joiner.add(route.getPath());
+            }
+            if (types.contains(ORIGIN)) {
+                joiner.add(getRemoteAddr(request));
+            }
+            if (types.contains(USER)) {
+                joiner.add(request.getUserPrincipal() != null ? request.getUserPrincipal().getName() : ANONYMOUS);
+            }
+        }
+        return joiner.toString();
+    }
+
+    public Rate consume(LimitReq limitReq, String key) {
+        Long rate = limitReq.getRate();
+        final Long current = this.stringRedisTemplate.boundValueOps(key).increment(1L);
+        Long expire = this.stringRedisTemplate.getExpire(key);
+        if (expire == null || expire == -1) {
+            this.stringRedisTemplate.expire(key, 10, SECONDS);
+            expire = 1L;
         }
 
-        @Bean
-        public LimitReqStrategy limitReqStrategy(RedisTemplate redisTemplate) {
-            return new LimitReqStrategy(redisTemplate);
-        }
+        return new Rate(rate, Math.max(-1, rate - current), SECONDS.toMillis(expire), null);
     }
 
 }

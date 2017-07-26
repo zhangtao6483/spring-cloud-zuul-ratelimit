@@ -8,7 +8,8 @@ zuul:
     limitReqs:
       serviceA:
         rate: 10
-
+        type:
+          - url
 spring:
   redis:
     host: 127.0.0.1

@@ -5,12 +5,14 @@ import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * @author zhangtao
  * @date 2017/7/24.
  */
 @Data
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class Rate {
