@@ -18,7 +18,7 @@ import static org.springframework.http.HttpStatus.OK;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = RateLimitApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class RateLimitApplicationTest {
+public class RatePoliciesApplicationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;

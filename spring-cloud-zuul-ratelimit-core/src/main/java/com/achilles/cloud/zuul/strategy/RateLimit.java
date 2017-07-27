@@ -1,9 +1,8 @@
 package com.achilles.cloud.zuul.strategy;
 
-import com.achilles.cloud.zuul.Rate;
-import com.achilles.cloud.zuul.config.LimitReq;
+import com.achilles.cloud.zuul.config.Policies;
 
 public interface RateLimit {
 
-	Rate consume(LimitReq limitReq, String key);
+    boolean remaining(Policies policies, String key);
 }

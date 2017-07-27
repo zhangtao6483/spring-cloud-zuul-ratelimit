@@ -19,7 +19,7 @@
     <groupId>com.achilles.cloud</groupId>
     <artifactId>spring-cloud-zuul-ratelimit</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Rate limit for Spring Cloud Netflix Zuul</name>
+    <name>Rate policies for Spring Cloud Netflix Zuul</name>
     <packaging>pom</packaging>
 
     <properties>

@@ -5,9 +5,10 @@ zuul:
       url: forward:/services
   ratelimit:
     enabled: true
-    limitReqs:
+    policies:
       serviceA:
-        rate: 1
+        limit: 10
+        refresh-interval: 2
         type:
           - url
 spring:
