@@ -1,7 +1,5 @@
 package com.achilles.cloud.zuul.strategy;
 
-import com.achilles.cloud.zuul.Rate;
-import com.achilles.cloud.zuul.config.Policies;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -14,32 +12,27 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  */
 @Slf4j
 @Component
-public class CountRateLimit implements RateLimit {
+public class CountRateLimit implements RateChecker {
 
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
+	public static final String STRATEGY_TYPE = "count";
 
-    @Override
-    public boolean remaining(Policies policies, String key) {
-        Rate rate = consume(policies, key);
-        log.info(rate.toString());
-        if (rate.getRemaining() < 0) {
-            return false;
-        }
-        return true;
-    }
+	@Autowired
+	private StringRedisTemplate stringRedisTemplate;
 
-    public Rate consume(Policies policies, String key) {
-
-        final Long limit = policies.getLimit();
-        final Long refreshInterval = policies.getRefreshInterval();
-        final Long current = this.stringRedisTemplate.boundValueOps(key).increment(1L);
-        Long expire = this.stringRedisTemplate.getExpire(key);
-        if (expire == null || expire == -1) {
-            this.stringRedisTemplate.expire(key, refreshInterval, SECONDS);
-            expire = refreshInterval;
-        }
-        return new Rate(limit, Math.max(-1, limit - current), SECONDS.toMillis(expire), null);
-    }
+	@Override
+	public boolean acquire(String key, Long limit, Long interval) {
+		final Long current = this.stringRedisTemplate.boundValueOps(key).increment(1L);
+		Long expire = this.stringRedisTemplate.getExpire(key);
+		if (expire == null || expire == -1) {
+			this.stringRedisTemplate.expire(key, interval, SECONDS);
+			expire = interval;
+		}
+		Long remaining = Math.max(-1, limit - current);
+		log.info(Long.toString(remaining));
+		if (remaining < 0) {
+			return false;
+		}
+		return true;
+	}
 
 }

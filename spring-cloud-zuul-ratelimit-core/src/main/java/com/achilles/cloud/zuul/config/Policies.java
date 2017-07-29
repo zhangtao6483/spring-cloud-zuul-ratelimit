@@ -16,15 +16,16 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 @NoArgsConstructor
 public class Policies {
 
-    private Long refreshInterval = MINUTES.toSeconds(1L);
-    private Long limit;
+	private Long interval = MINUTES.toSeconds(1L);
+	private Long limit;
+	private String strategy;
 
-    private List<Type> type = new ArrayList<>();
+	private List<Type> type = new ArrayList<>();
 
-    public enum Type {
-        ORIGIN,
-        USER,
-        URL
-    }
+	public enum Type {
+		ORIGIN,
+		USER,
+		URL
+	}
 
 }

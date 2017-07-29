@@ -20,13 +20,15 @@ import static org.springframework.http.HttpStatus.OK;
 @SpringBootTest(classes = RateLimitApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class RatePoliciesApplicationTest {
 
-    @Autowired
-    private TestRestTemplate restTemplate;
+	@Autowired
+	private TestRestTemplate restTemplate;
 
-    @Test
-    public void testRateLmit() {
-        ResponseEntity<String> response = this.restTemplate.exchange("/serviceA", GET, null, String.class);
-        assertEquals(OK, response.getStatusCode());
+	@Test
+	public void testRateLmit() {
+		for (int i = 0; i < 10; i++) {
+			ResponseEntity<String> response = this.restTemplate.exchange("/serviceA", GET, null, String.class);
 
-    }
+		}
+
+	}
 }
