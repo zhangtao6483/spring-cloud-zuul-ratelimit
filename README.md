@@ -12,7 +12,7 @@ spring cloud zuul限流
   实现CountRateLimit<br>
   计数器限流存在[临界问题](http://www.kissyu.org/2016/08/13/%E9%99%90%E6%B5%81%E7%AE%97%E6%B3%95%E6%80%BB%E7%BB%93/)：
 
-![临界问题](https://raw.githubusercontent.com/zhangtao6483/spring-cloud-zuul-ratelimit/blob/master/img/count_problem.jpg)
+![临界问题](https://raw.githubusercontent.com/zhangtao6483/spring-cloud-zuul-ratelimit/master/img/count_problem.jpg)
 
 用户在0:59时，瞬间发送了100个请求，并且1:00又瞬间发送了100个请求，那么其实这个用户在1秒里面，瞬间发送了200个请求。
 
