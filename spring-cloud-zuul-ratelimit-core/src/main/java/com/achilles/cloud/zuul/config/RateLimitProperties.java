@@ -22,6 +22,8 @@ public class RateLimitProperties {
 
     private Map<String, Policies> policies = new LinkedHashMap<>();
 
+    private String strategy;
+
     private boolean enabled;
 
 }

@@ -5,12 +5,10 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -19,17 +17,19 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * @author zhangtao
  */
 @Slf4j
-@Component
-public class TokenBucketRateLimit implements RateChecker {
+public class TokenBucketRateChecker implements RateChecker {
 
     public static final String STRATEGY_TYPE = "bucket";
 
-    @Autowired
-    private StringRedisTemplate stringRedisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
+
+    public TokenBucketRateChecker(final StringRedisTemplate stringRedisTemplate) {
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
 
     @Override
-    public boolean acquire(String key, Long limit, Long interval) {
-        Boolean execute = stringRedisTemplate.execute(new Callback(key, limit, interval));
+    public boolean acquire(final String key, final Long limit, final Long interval) {
+        final Boolean execute = this.stringRedisTemplate.execute(new Callback(key, limit, interval));
         if (execute == null) {
             return false;
         }
@@ -38,15 +38,15 @@ public class TokenBucketRateLimit implements RateChecker {
 
     protected static class Callback implements SessionCallback<Boolean> {
 
-        private String key;
+        private final String key;
 
-        private Long limit;
+        private final Long limit;
 
-        private Long interval;
+        private final Long interval;
 
-        private String requestId;
+        private final String requestId;
 
-        public Callback(String key, Long limit, Long interval) {
+        public Callback(final String key, final Long limit, final Long interval) {
             this.key = key;
             this.limit = limit;
             this.interval = interval;
@@ -54,20 +54,20 @@ public class TokenBucketRateLimit implements RateChecker {
         }
 
         @Override
-        public <K, V> Boolean execute(RedisOperations<K, V> redisOperations) throws DataAccessException {
+        public <K, V> Boolean execute(final RedisOperations<K, V> redisOperations) throws DataAccessException {
             return executeInternal((RedisOperations<String, String>)redisOperations);
         }
 
         private Boolean executeInternal(final RedisOperations<String, String> redisOperations) {
             redisOperations.multi();
-            long milliseconds = System.currentTimeMillis();
-            String callKey = requestId.concat("-").concat(Long.toString(milliseconds));
+            final long milliseconds = System.currentTimeMillis();
+            final String callKey = this.requestId.concat("-").concat(Long.toString(milliseconds));
 
-            redisOperations.opsForZSet().removeRangeByScore(key, Double.MIN_VALUE,
-                milliseconds - TimeUnit.MILLISECONDS.convert(interval, SECONDS));
-            redisOperations.opsForZSet().add(key, callKey, milliseconds);
-            redisOperations.expire(key, interval, SECONDS);
-            redisOperations.opsForZSet().count(key, Double.MIN_VALUE, Double.MAX_VALUE);
+            redisOperations.opsForZSet().removeRangeByScore(this.key, Double.MIN_VALUE,
+                milliseconds - TimeUnit.MILLISECONDS.convert(this.interval, SECONDS));
+            redisOperations.opsForZSet().add(this.key, callKey, milliseconds);
+            redisOperations.expire(this.key, this.interval, SECONDS);
+            redisOperations.opsForZSet().count(this.key, Double.MIN_VALUE, Double.MAX_VALUE);
 
             final List<Object> result = redisOperations.exec();
 
@@ -76,8 +76,8 @@ public class TokenBucketRateLimit implements RateChecker {
             }
             final Long count = (Long)result.get(3);
 
-            if (count > limit) {
-                redisOperations.opsForZSet().remove(key, callKey);
+            if (count > this.limit) {
+                redisOperations.opsForZSet().remove(this.key, callKey);
                 return false;
             }
 

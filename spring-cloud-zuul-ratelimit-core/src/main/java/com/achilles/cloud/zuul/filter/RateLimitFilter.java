@@ -11,19 +11,14 @@ import com.achilles.cloud.zuul.config.Policies;
 import com.achilles.cloud.zuul.config.Policies.Type;
 import com.achilles.cloud.zuul.config.RateLimitProperties;
 import com.achilles.cloud.zuul.exception.CustomZuulRuntimeException;
-import com.achilles.cloud.zuul.strategy.CountRateLimit;
 import com.achilles.cloud.zuul.strategy.RateChecker;
-import com.achilles.cloud.zuul.strategy.TokenBucketRateLimit;
-import com.achilles.cloud.zuul.util.SpringUtil;
 import com.netflix.zuul.ZuulFilter;
 import com.netflix.zuul.context.RequestContext;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.netflix.zuul.filters.Route;
 import org.springframework.cloud.netflix.zuul.filters.RouteLocator;
 import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants;
-import org.springframework.stereotype.Component;
 import org.springframework.web.util.UrlPathHelper;
 
 import static com.achilles.cloud.zuul.config.Policies.Type.ORIGIN;
@@ -36,18 +31,25 @@ import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
  * @date 2017/7/23.
  */
 @Slf4j
-@Component
+@RequiredArgsConstructor
 public class RateLimitFilter extends ZuulFilter {
 
     private static final UrlPathHelper URL_PATH_HELPER = new UrlPathHelper();
     private static final String X_FORWARDED_FOR = "X-FORWARDED-FOR";
     private static final String ANONYMOUS = "anonymous";
 
-    @Autowired
+    private RateChecker rateChecker;
+
+    private RateLimitProperties properties;
+
     private RouteLocator routeLocator;
 
-    @Autowired
-    private RateLimitProperties properties;
+    public RateLimitFilter(final RateChecker rateChecker, final RateLimitProperties properties,
+                           final RouteLocator routeLocator) {
+        this.rateChecker = rateChecker;
+        this.properties = properties;
+        this.routeLocator = routeLocator;
+    }
 
     @Override
     public String filterType() {
@@ -72,28 +74,16 @@ public class RateLimitFilter extends ZuulFilter {
         final HttpServletRequest request = ctx.getRequest();
 
         policies().ifPresent(policies -> {
-            Optional<RateChecker> rateChecker = selectStrategy(policies);
-            rateChecker.ifPresent(r -> {
-                if (!r.acquire(key(request, policies.getType()), policies.getLimit(), policies.getInterval())) {
-                    ctx.setResponseStatusCode(TOO_MANY_REQUESTS.value());
-                    ctx.put("rateLimitExceeded", "true");
-                    throw new CustomZuulRuntimeException(TOO_MANY_REQUESTS.toString(),
-                        TOO_MANY_REQUESTS.value(), null);
-                }
-            });
+            if (!this.rateChecker.acquire(key(request, policies.getType()), policies.getLimit(),
+                policies.getInterval())) {
+                ctx.setResponseStatusCode(TOO_MANY_REQUESTS.value());
+                ctx.put("rateLimitExceeded", "true");
+                throw new CustomZuulRuntimeException(TOO_MANY_REQUESTS.toString(),
+                    TOO_MANY_REQUESTS.value(), null);
+            }
         });
 
         return null;
-    }
-
-    private Optional<RateChecker> selectStrategy(Policies policies) {
-        if (StringUtils.equals(policies.getStrategy(), CountRateLimit.STRATEGY_TYPE)) {
-            return Optional.of(SpringUtil.getBean(CountRateLimit.class));
-        }
-        if (StringUtils.equals(policies.getStrategy(), TokenBucketRateLimit.STRATEGY_TYPE)) {
-            return Optional.of(SpringUtil.getBean(TokenBucketRateLimit.class));
-        }
-        return Optional.empty();
     }
 
     private Optional<Policies> policies() {
@@ -102,7 +92,8 @@ public class RateLimitFilter extends ZuulFilter {
     }
 
     private Route route() {
-        String requestURI = URL_PATH_HELPER.getPathWithinApplication(RequestContext.getCurrentContext().getRequest());
+        final String requestURI = URL_PATH_HELPER.getPathWithinApplication(
+            RequestContext.getCurrentContext().getRequest());
         return this.routeLocator.getMatchingRoute(requestURI);
     }
 

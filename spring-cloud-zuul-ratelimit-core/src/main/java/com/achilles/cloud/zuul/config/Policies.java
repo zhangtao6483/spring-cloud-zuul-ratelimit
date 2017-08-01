@@ -18,7 +18,6 @@ public class Policies {
 
     private Long interval = MINUTES.toSeconds(1L);
     private Long limit;
-    private String strategy;
 
     private List<Type> type = new ArrayList<>();
 

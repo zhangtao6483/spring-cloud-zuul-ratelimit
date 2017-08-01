@@ -8,9 +8,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import static org.junit.Assert.assertEquals;
 import static org.springframework.http.HttpMethod.GET;
-import static org.springframework.http.HttpStatus.OK;
 
 /**
  * @author zhangtao
@@ -20,15 +18,14 @@ import static org.springframework.http.HttpStatus.OK;
 @SpringBootTest(classes = RateLimitApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class RatePoliciesApplicationTest {
 
-	@Autowired
-	private TestRestTemplate restTemplate;
+    @Autowired
+    private TestRestTemplate restTemplate;
 
-	@Test
-	public void testRateLmit() {
-		for (int i = 0; i < 10; i++) {
-			ResponseEntity<String> response = this.restTemplate.exchange("/serviceA", GET, null, String.class);
+    @Test
+    public void testRateLmit() {
+        for (int i = 0; i < 10; i++) {
+            final ResponseEntity<String> response = this.restTemplate.exchange("/serviceA", GET, null, String.class);
 
-		}
-
-	}
+        }
+    }
 }

@@ -4,12 +4,12 @@ zuul:
       path: /serviceA
       url: forward:/services
   ratelimit:
+    strategy: bucket
     enabled: true
     policies:
       serviceA:
-        strategy: bucket
-        limit: 4
-        interval: 60
+        limit: 2
+        interval: 1
         type:
           - url
 spring:
